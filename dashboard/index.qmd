@@ -1,0 +1,210 @@
+---
+title: "COVID-19 Epidemiological Surveillance"
+subtitle: "Synthetic Dashboard — Synthea Massachusetts"
+format: 
+  dashboard:
+    orientation: rows
+    theme: cosmo
+    css: dashboard.css
+    nav-buttons:
+      - icon: github
+        href: "https://github.com/mmaturano-epidemio/covid_surveillance_dashboard"
+embed-resources: true
+---
+  
+```{r}
+#| label: setup
+#| include: false
+
+pacman::p_load(data.table, echarts4r, here, htmltools)
+
+source(here("scripts", "1_setup.R"))
+source(here("scripts", "3_demographics.R"))
+source(here("scripts", "4_spacial_distribution.R"))
+source(here("scripts", "5_temporal_distribution.R"))
+```
+
+# Overview
+
+```{=html}
+<div class="hero">
+  <div class="hero-content">
+    <h1>COVID-19 Epidemiological Surveillance</h1>
+    <p>An interactive portfolio dashboard analyzing demographic, spatial, and temporal trends in Massachusetts using the synthetic Synthea™ dataset.</p>
+    <a href="https://github.com/mmaturano-epidemio/covid_surveillance_dashboard" target="_blank" class="hero-btn">View Repository</a>
+  </div>
+</div>
+```
+
+  
+# Demographics
+
+## Row 
+
+### Column {width="50%"}
+
+#### Row {height="100%"}
+
+
+```{r}
+#| title: "Population pyramid"
+pyramid
+```
+
+### Column {width="35%"}
+
+#### Row {height="100%"}
+
+
+```{r}
+#| title: "Distribution by race"
+race
+```
+
+
+### Column {width="35%"}
+
+#### Row {height="50%"}
+  
+```{r}
+#| content: valuebox
+#| title: "Male % — overall"
+list(
+  icon = "gender-male",
+  color = "primary",
+  value = paste0(male_pct_general, "%")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Male % — hospitalized"
+list(
+  icon = "gender-male",
+  color = "info",
+  value = paste0(male_pct_hospitalized, "%")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Male % — deceased"
+list(
+  icon = "gender-male",
+  color = "danger",
+  value = paste0(male_pct_deceased, "%")
+)
+```
+
+#### Row {height="50%"}
+
+```{r}
+#| content: valuebox
+#| title: "Mean age — overall"
+list(
+  icon = "calendar3",
+  color = "primary",
+  value = mean_age_general
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Mean age — hospitalized"
+list(
+  icon = "calendar3",
+  color = "info",
+  value = mean_age_hospitalized
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Mean age — deceased"
+list(
+  icon = "calendar3",
+  color = "danger",
+  value = mean_age_deceased
+)
+```
+
+# Spatial Distribution
+
+## Row
+
+### Column {width="40%"}
+
+```{r}
+#| title: "COVID-19 incidence"
+county_table
+```
+
+### Column {width="60%"}
+
+```{r}
+#| title: "Cases and diagnosis centers"
+map
+```
+
+
+# County performance
+
+## Row
+
+### Column {width="30%"}
+```{r}
+#| title: "Hospitalizations by county"
+top_counties
+```
+
+### Column {width="35%"}
+
+
+```{r}
+#| title: "Hospital days by county"
+
+county_average_days
+
+```
+
+### Column {width="35%"}
+```{r}
+#| title: "Lethality by county"
+
+county_lethality
+```
+
+
+# Temporal Trends
+
+```{r}
+#| title: "Patients by county"
+temporal_chart
+```
+
+# About
+
+## Row
+
+### Column {width="60%"}
+
+#### **Project Overview**
+This dashboard demonstrates an end-to-end epidemiological surveillance workflow — 
+from relational database extraction to interactive geospatial and temporal 
+analysis — built entirely on **synthetic patient data**. It uses the [Synthea™](https://synthetichealth.github.io/synthea/) COVID-19 dataset to model realistic public health metrics in Massachusetts.
+
+#### *Data Source*
+All records were generated using [Synthea](https://github.com/synthetichealth/synthea), 
+an open-source synthetic patient population simulator developed by MITRE. 
+No real patient, institution, or geographic incidence pattern is represented — 
+hospital names and case counts are fictional.
+
+### Column {width="40%"}
+
+#### **Technical Stack & Methodology**
+The project relies on a highly reproducible and efficient pipeline:
+
+* **Data Manipulation:** Heavy lifting and data wrangling performed entirely with R's `data.table` for high-performance memory management and execution speed.
+* **Visualization:** Interactive, modular charts built with `echarts4r` and custom CSS styling.
+* **Framework:** Compiled as a standalone Quarto Dashboard, utilizing the `here` package for robust, relative path management.
+

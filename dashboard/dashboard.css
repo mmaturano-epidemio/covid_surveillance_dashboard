@@ -1,0 +1,245 @@
+/* ============================================
+  COVID-19 Surveillance Dashboard
+Fonts: Manrope
+Sober blue institutional palette
+============================================ */
+  
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+
+/* --------------------------------------------
+  1. GLOBAL VARIABLES
+-------------------------------------------- */
+  :root {
+    --blue-50:  #D6E8F5;
+      --blue-100: #8FC1E3;
+      --blue-200: #4C9FCB;
+      --blue-300: #1D6FA3;
+      --blue-400: #0B3C5D;
+      
+      --color-neutral: #B0B8BE;
+      --color-alert:   #C0392B;
+      
+      --font-main: "Manrope", sans-serif;
+  }
+
+/* --------------------------------------------
+  2. TYPOGRAPHY
+-------------------------------------------- */
+  body,
+.dashboard-title,
+.dashboard-subtitle,
+.navbar-brand,
+.nav-link,
+h1, h2, h3, h4, h5, h6,
+.value-box-title,
+.value-box-value,
+.table,
+.kable-table,
+.dataTables_wrapper,
+.btn,
+.leaflet-control {
+  font-family: var(--font-main) !important;
+}
+
+table {
+  font-family: var(--font-main) !important;
+}
+
+/* --------------------------------------------
+  3. VALUE BOXES
+Maps to the "primary" / "info" / "danger" colors 
+used in the R valuebox lists (index.qmd)
+-------------------------------------------- */
+  .value-box.bg-primary,
+.bslib-value-box.bg-primary {
+  background-color: var(--blue-400) !important;
+}
+.value-box.bg-primary .value-box-title,
+.value-box.bg-primary .value-box-value,
+.bslib-value-box.bg-primary .value-box-title,
+.bslib-value-box.bg-primary .value-box-value {
+  color: var(--blue-50) !important;
+}
+
+.value-box.bg-info,
+.bslib-value-box.bg-info {
+  background-color: var(--blue-200) !important;
+}
+.value-box.bg-info .value-box-title,
+.value-box.bg-info .value-box-value,
+.bslib-value-box.bg-info .value-box-title,
+.bslib-value-box.bg-info .value-box-value {
+  color: #ffffff !important;
+}
+
+/* Reserved for severity/mortality indicators only — do not reuse for neutral categories */
+  .value-box.bg-danger,
+.bslib-value-box.bg-danger {
+  background-color: var(--color-alert) !important;
+}
+.value-box.bg-danger .value-box-title,
+.value-box.bg-danger .value-box-value,
+.bslib-value-box.bg-danger .value-box-title,
+.bslib-value-box.bg-danger .value-box-value {
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------
+  4. TABLES (kableExtra / DT)
+-------------------------------------------- */
+  .table,
+.kable-table,
+.dataTables_wrapper table {
+  font-size: 1rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.table thead th,
+.kable-table thead th,
+.dataTables_wrapper thead th {
+  background-color: var(--blue-400) !important;
+  color: var(--blue-50) !important;
+  font-weight: 500;
+  border-bottom: 2px solid var(--blue-200);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(76, 159, 203, 0.08);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(11, 60, 93, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+/* --------------------------------------------
+  5. HERO SECTION
+-------------------------------------------- */
+.hero {
+  background-image: 
+    linear-gradient(135deg, rgba(11, 60, 93, 0.85), rgba(29, 111, 163, 0.75)), 
+    url('img/hero_bg.jpg'); 
+  background-size: cover;
+  background-position: center;
+  color: var(--blue-50);
+  padding: 4rem 2rem;
+  margin-bottom: 1.5rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.hero p {
+  font-size: 1.15rem;
+  opacity: 0.95;
+  max-width: 700px; /
+  margin: 0 auto 2.5rem auto;
+  line-height: 1.6;
+}
+
+.hero-btn {
+  background-color: var(--blue-200);
+  color: #ffffff;
+  padding: 0.8rem 1.8rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-family: var(--font-main);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.hero-btn:hover {
+  background-color: var(--blue-100);
+  color: var(--blue-400);
+  text-decoration: none;
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 3rem 1rem;
+  }
+  .hero h1 {
+    font-size: 2rem;
+  }
+  .hero p {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+}
+
+/* --------------------------------------------
+  6. CHARTS (echarts4r)
+Background transparency is already handled in R via
+e_common(theme = NULL) in 1_setup.R. Uncomment below
+only if a specific chart renders with an opaque background.
+-------------------------------------------- */
+  /*
+  .echarts4r, .echarts4r canvas {
+    background-color: transparent !important;
+  }
+*/
+  
+  /* --------------------------------------------
+  7. CARDS / BUTTONS / LINKS
+-------------------------------------------- */
+  .card-header {
+    background-color: var(--blue-400);
+    color: var(--blue-50);
+    font-weight: 600;
+  }
+
+.btn-default,
+.btn-secondary {
+  background-color: var(--blue-200);
+  border-color: var(--blue-400);
+  color: white;
+}
+.btn-default:hover,
+.btn-secondary:hover {
+  background-color: var(--blue-300);
+  border-color: var(--blue-400);
+  color: white;
+}
+
+a {
+  color: var(--blue-300);
+}
+a:hover {
+  color: var(--blue-200);
+}
+
+/* --------------------------------------------
+  8. RESPONSIVE
+-------------------------------------------- */
+  @media (max-width: 768px) {
+    .hero {
+      padding: 2rem 1rem;
+    }
+    .hero h1 {
+      font-size: 1.8rem;
+    }
+    .table,
+    .kable-table {
+      font-size: 0.8rem;
+    }
+  }
+  
