@@ -22,7 +22,7 @@ palette_categorical <- c("#0B3C5D", "#1D6FA3", "#4C9FCB", "#8FC1E3", "#5B7B93", 
 # Neutral - for "Unknown"/NA, kept outside the main palette so it doesn't compete visually
 color_neutral <- "#B0B8BE"
 
-# Clinical accent - EXCLUSIVE use for maximum severity / mortality. Do not reuse elsewhere.
+# Clinical accent - EXCLUSIVE use for maximum severity / mortality. 
 color_alert <- "#C0392B"
 
 # Severity-specific palette (levels 0 to 4), accent reserved for level 4 only
@@ -34,7 +34,7 @@ palette_severity <- c(
   "4" = color_alert  # deceased within 30-day window
 )
 
-dashboard_font <- "Manrope"  # adjust once the final CSS is defined
+dashboard_font <- "Manrope"  
 
 # ==============================================================================
 # ---- Standardized chart functions ----
@@ -43,7 +43,7 @@ dashboard_font <- "Manrope"  # adjust once the final CSS is defined
 # Shared theme: applies to any chart via e_common(), avoids repeating font/tooltip in every function
 e_common(
   font_family = dashboard_font,
-  theme = NULL  # transparent background, to integrate with dashboard cards (see mi_dashboard.css)
+  theme = NULL  # transparent background, to integrate with dashboard cards 
 )
 
 create_piechart <- function(data, group_var, title = NULL, palette = palette_categorical, donut = TRUE) {
@@ -238,7 +238,7 @@ build_epidemic_curve <- function(data, date_var = "covid_date") {
   daily[order(date)]
 }
 
-# cutoff_date lets you train on a partial window and compare against known future values
+# cutoff_date allows for training on a partial window and comparing against known future values
 forecast_epidemic_curve <- function(daily, cutoff_date, horizon = 14) {
   train <- daily[date <= cutoff_date]
   actual_future <- daily[date > cutoff_date][seq_len(min(horizon, .N))]
@@ -252,7 +252,7 @@ forecast_epidemic_curve <- function(daily, cutoff_date, horizon = 14) {
   list(
     model = fit,
     historical = train,
-    actual_future = actual_future,  # what really happened — the point of the exercise
+    actual_future = actual_future,  # what really happened 
     forecast = data.table(
       date = future_dates,
       point = as.numeric(fc$mean),
