@@ -30,7 +30,7 @@ source(here("scripts", "5_temporal_distribution.R"))
 <div class="hero">
   <div class="hero-content">
     <h1>COVID-19 Epidemiological Surveillance</h1>
-    <p>An interactive portfolio dashboard analyzing demographic, spatial, and temporal trends in Massachusetts using the synthetic Synthea™ dataset.</p>
+    <p>An interactive dashboard analyzing demographic, spatial, and temporal trends in Massachusetts using the synthetic Synthea™ dataset.</p>
     <a href="https://github.com/mmaturano-epidemio/covid_surveillance_dashboard" target="_blank" class="hero-btn">View Repository</a>
   </div>
 </div>
