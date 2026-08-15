@@ -91,4 +91,4 @@ MIT — see `LICENSE`.
 
 ## Author
 
-[Manuel Maturano] — Medical epidemiologist 
+Manuel Maturano — Medical epidemiologist 
