@@ -1,6 +1,6 @@
 # ==============================================================================
 # ---- 4_demographics.R ----
-# Assumes 1_setup.R and 0_load_data.R already ran. 
+# Assumes 1_setup.R already ran. 
 # Standalone fallback below only triggers if opened in isolation.
 # ==============================================================================
 
