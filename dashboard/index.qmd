@@ -151,13 +151,13 @@ map
 
 ## Row
 
-### Column {width="30%"}
+### Column {width="40%"}
 ```{r}
 #| title: "Hospitalizations by county"
 top_counties
 ```
 
-### Column {width="35%"}
+### Column {width="60%"}{.tabset}
 
 
 ```{r}
@@ -167,7 +167,6 @@ county_average_days
 
 ```
 
-### Column {width="35%"}
 ```{r}
 #| title: "Lethality by county"
 
