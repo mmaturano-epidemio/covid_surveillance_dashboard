@@ -4,7 +4,7 @@
 
 # ---- Getting libraries and data ----
 
-pacman::p_load(data.table, DBI, RPostgres, stringr)
+pacman::p_load(data.table, DBI, RPostgres, stringr, here)
 
 con <- dbConnect(
   RPostgres::Postgres(),
@@ -29,6 +29,55 @@ query <- "WITH covid_cohort AS (
   FROM conditions
   WHERE condition_code = 840539006
   GROUP BY patient_id
+),
+obese_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code IN (162864005, 408512008)
+      AND c.start_date < cc.covid_date
+),
+hta_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code = 59621000
+      AND c.start_date < cc.covid_date
+),
+diabetes_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code IN (44054006) 
+      AND c.start_date < cc.covid_date
+),
+ckd_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code IN (431855005, 431856006, 433144002)
+      AND c.start_date < cc.covid_date
+),
+chd_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code = 53741008
+      AND c.start_date < cc.covid_date
+),
+afib_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code = 49436004
+      AND c.start_date < cc.covid_date
+),
+chronic_resp_pre_covid AS (
+    SELECT DISTINCT c.patient_id
+    FROM conditions c
+    INNER JOIN covid_cohort cc ON c.patient_id = cc.patient_id
+    WHERE c.condition_code IN (87433001, 185086009)  -- emphysema, COPD
+      AND c.start_date < cc.covid_date
 ),
 first_covid_encounter AS (
   SELECT DISTINCT ON (e.patient_id) 
@@ -100,6 +149,13 @@ org_int.lat AS inpatient_org_lat,
 org_int.lon AS inpatient_org_lon,
 ox.oxygen_date,
 v.ventilation_date,
+CASE WHEN obese_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS obese_pre_covid,
+CASE WHEN hta_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS hta_pre_covid,
+CASE WHEN diabetes_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS diabetes_pre_covid,
+CASE WHEN ckd_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS ckd_pre_covid,
+CASE WHEN chd_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS chd_pre_covid,
+CASE WHEN afib_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS afib_pre_covid,
+CASE WHEN chronic_resp_pre_covid.patient_id IS NOT NULL THEN 1 ELSE 0 END AS chronic_resp_pre_covid,
 DATE_PART('day', i.discharge_date - i.admission_date) AS length_of_stay,
 DATE_PART('day', v.ventilation_date - i.admission_date) AS days_to_ventilation,
 CASE WHEN p.deathdate IS NOT NULL AND p.deathdate >= cc.covid_date THEN 1 ELSE 0 END AS deceased_post_covid,
@@ -119,7 +175,14 @@ LEFT JOIN organizations org_dx ON pe.dx_org_id = org_dx.id
 LEFT JOIN inpatient_admission i ON p.id = i.patient_id
 LEFT JOIN organizations org_int ON i.inpatient_org_id = org_int.id
 LEFT JOIN oxygen_therapy ox ON p.id = ox.patient_id
-LEFT JOIN mechanical_ventilation v ON p.id = v.patient_id;
+LEFT JOIN mechanical_ventilation v ON p.id = v.patient_id
+LEFT JOIN obese_pre_covid ON p.id = obese_pre_covid.patient_id
+LEFT JOIN hta_pre_covid ON p.id = hta_pre_covid.patient_id
+LEFT JOIN diabetes_pre_covid ON p.id = diabetes_pre_covid.patient_id
+LEFT JOIN ckd_pre_covid ON p.id = ckd_pre_covid.patient_id
+LEFT JOIN chd_pre_covid ON p.id = chd_pre_covid.patient_id
+LEFT JOIN afib_pre_covid ON p.id = afib_pre_covid.patient_id
+LEFT JOIN chronic_resp_pre_covid  ON p.id = chronic_resp_pre_covid.patient_id;
 "
 
 raw_data <- dbGetQuery(con, query) 
@@ -148,4 +211,17 @@ levels(tidy_data$race_name) <- stringr::str_to_title(levels(data$race_name))
 
 tidy_data <- tidy_data[, -c("inpatient_org_state", "dx_org_state"), with = F] # Only one state
 
+tidy_data[, severity_level_broad := factor(
+  fcase(severity_level == 0, "Outpatient",
+        severity_level %in% 1:2, "Hospitalized without respiratory support",
+        severity_level %in% 3:4, "Respiratory support / deceased"),
+  levels = c("Outpatient", "Hospitalized without respiratory support", "Respiratory support / deceased"))]
+
+morbidities <- names(data)[names(data) %ilike% "pre_"]
+tidy_data[, comorbidities := Reduce(f = `+`, x = .SD), .SDcols = morbidities]
+tidy_data[, comorbidity_count_grouped := fifelse(comorbidities >= 4, "4+", as.character(comorbidities))]
+tidy_data[, comorbidity_count_grouped := factor(comorbidity_count_grouped, levels = c("0","1","2","3","4+"))]
+
+
 saveRDS(tidy_data, here("datasets", "tidy_data.rds"))
+
