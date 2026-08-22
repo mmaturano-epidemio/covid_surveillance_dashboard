@@ -128,7 +128,7 @@ list(
 )
 ```
 
-# Spatial Distribution
+# Geospatial Distribution
 
 ## Row
 
@@ -159,7 +159,6 @@ top_counties
 
 ### Column {width="60%"}{.tabset}
 
-
 ```{r}
 #| title: "Hospital days by county"
 
@@ -173,13 +172,58 @@ county_average_days
 county_lethality
 ```
 
+# Clinical features
+
+## Row
+  
+### Column {width="60%"}
+
+::: panel-tabset
+
+## Severe cases by comorbidity and age (%)
+```{r}
+# title: "Severity by comorbidity and age"
+age_comorbidity_heatmap
+```
+
+## Severity by comorbidity
+
+```{r}
+# title: "Severity by comorbidity"
+
+comorbidity_severity_chart
+```
+
+:::
+
+### Column {width="40%"}
+
+::: panel-tabset
+
+
+## Comorbidity count
+```{r}
+# title: "Comorbidity count"
+comorbidity_count_chart
+
+```
+
+## Severity by comorbidity count
+```{r}
+# title: "Severity by comorbidity count"
+
+comorbidity_doseresponse_chart 
+
+```
+:::
 
 # Temporal Trends
 
 ```{r}
-#| title: "Patients by county"
+#| title: "Daily cases by severity"
 temporal_chart
 ```
+
 
 # About
 

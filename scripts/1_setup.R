@@ -262,6 +262,30 @@ forecast_epidemic_curve <- function(daily, cutoff_date, horizon = 14) {
   )
 }
 
+forecast_epidemic_curve_log <- function(daily, cutoff_date, horizon = 14) {
+  train <- daily[date <= cutoff_date]
+  actual_future <- daily[date > cutoff_date][seq_len(min(horizon, .N))]
+  
+  # log1p handles zero-case days without producing -Inf
+  ts_data <- ts(log1p(train$N), frequency = 7)
+  fit <- auto.arima(ts_data, seasonal = TRUE, stepwise = FALSE, approximation = FALSE)
+  fc <- forecast(fit, h = horizon)
+  
+  future_dates <- seq(cutoff_date + 1, by = "day", length.out = horizon)
+  
+  list(
+    model = fit,
+    historical = train,
+    actual_future = actual_future,
+    forecast = data.table(
+      date = future_dates,
+      point = expm1(as.numeric(fc$mean)),
+      lower95 = expm1(as.numeric(fc$lower[, 2])),
+      upper95 = expm1(as.numeric(fc$upper[, 2]))
+    )
+  )
+}
+
 create_forecast_chart <- function(fc_result, title = NULL) {
   hist   <- fc_result$historical[, .(date, observed = N)]
   actual <- fc_result$actual_future[, .(date, actual = N)]
@@ -363,4 +387,224 @@ create_lethality_barchart <- function(data, min_n = 20, title = "Average lethali
             textStyle = list(fontFamily = dashboard_font, fontSize = 14))
 }
 
+# Broad severity — collapsed version of severity_level, better suited for stacked comparisons
+palette_severity_broad <- c(
+  "Outpatient" = palette_blue[1],
+  "Hospitalized without respiratory support" = palette_blue[3],
+  "Respiratory support / deceased" = color_alert
+)
+
+comorbidity_labels <- c(
+  obese_pre_covid        = "Obesity",
+  hta_pre_covid           = "Hypertension",
+  diabetes_pre_covid      = "Diabetes",
+  ckd_pre_covid           = "Chronic Kidney Disease",
+  chd_pre_covid           = "Coronary Heart Disease",
+  afib_pre_covid          = "Atrial Fibrillation",
+  chronic_resp_pre_covid  = "Chronic Respiratory Disease"
+)
+
+# ==============================================================================
+# ---- Shared plotting helper for stacked severity comparisons ----
+# Both comorbidity- and generic group-based severity charts converge here,
+# so the grid/small-N/plotting logic only lives in one place.
+# ==============================================================================
+plot_stacked_severity <- function(agg, group_levels, severity_levels, palette, 
+                                  min_n, title = NULL, subtext = NULL) {
+  
+  grid <- CJ(group = group_levels, severity = severity_levels)
+  agg <- merge(grid, agg, by = c("group", "severity"), all.x = TRUE)
+  agg[is.na(N), N := 0]
+  
+  agg[, n_group := sum(N), by = group]
+  agg[, pct := round(N / n_group * 100, 1)]
+  agg[, group_label := paste0(as.character(group), " (n=", n_group, ")")]
+  agg[, group_label := fifelse(n_group < min_n, paste0(group_label, ", low N"), group_label)]
+  
+  label_levels <- unique(agg[order(group)]$group_label)
+  agg[, group_label := factor(group_label, levels = label_levels)]
+  agg[, severity := factor(severity, levels = severity_levels)]
+  setorder(agg, severity, group)
+  
+  # Legend goes ABOVE the plot (horizontal), x-axis labels stay rotated BELOW —
+  # opposite ends of the chart, so they can't collide regardless of label length.
+  legend_top <- if (!is.null(subtext)) 55 else 34
+  
+  agg |>
+    group_by(severity) |>
+    e_charts(group_label) |>
+    e_bar(pct, stack = "severity") |>
+    e_color(unname(palette)) |>
+    e_tooltip(trigger = "axis") |>
+    e_y_axis(max = 100, axisLabel = list(formatter = "{value}%")) |>
+    e_x_axis(axisLabel = list(rotate = 30, interval = 0)) |>
+    e_legend(top = legend_top, left = "center", orient = "horizontal",
+             textStyle = list(fontFamily = dashboard_font, fontSize = 11)) |>
+    e_grid(top = legend_top + 50, bottom = "0%", containLabel = TRUE) |>
+    # e_grid(top = "10%") |>
+    e_title(
+      text = title, subtext = subtext,
+      textStyle = list(fontFamily = dashboard_font, fontSize = 14)
+    )
+}
+
+create_comorbidity_severity_chart <- function(data, comorbidity_labels,
+                                              broad_var = "severity_level_broad",
+                                              palette = palette_severity_broad,
+                                              min_n = 20, title = NULL) {
+  
+  compute_group <- function(subset_dt, group_name) {
+    dt <- subset_dt[, .N, by = broad_var]
+    setnames(dt, broad_var, "severity")
+    dt[, group := group_name]
+    dt
+  }
+  
+  overall <- compute_group(data, "Overall")
+  subgroups <- rbindlist(lapply(names(comorbidity_labels), function(v) {
+    compute_group(data[get(v) == 1], comorbidity_labels[[v]])
+  }))
+  agg <- rbind(overall, subgroups)
+  
+  plot_stacked_severity(
+    agg = agg,
+    group_levels = c("Overall", unname(comorbidity_labels)),
+    severity_levels = names(palette),
+    palette = palette,
+    min_n = min_n,
+    title = title,
+    subtext = "Groups are not mutually exclusive — a patient can belong to more than one comorbidity group"
+  )
+}
+
+create_grouped_severity_chart <- function(data, group_var, group_levels = NULL,
+                                          broad_var = "severity_level_broad",
+                                          palette = palette_severity_broad,
+                                          min_n = 20, title = NULL) {
+  
+  agg <- data[, .N, by = c(group_var, broad_var)]
+  setnames(agg, c(group_var, broad_var), c("group", "severity"))
+  if (is.null(group_levels)) group_levels <- levels(data[[group_var]])
+  
+  plot_stacked_severity(
+    agg = agg,
+    group_levels = group_levels,
+    severity_levels = names(palette),
+    palette = palette,
+    min_n = min_n,
+    title = title
+  )
+}
+
+assign_age_groups <- function(data, age_var = "age_at_dx", 
+                              binning = c("quantile", "fixed"), 
+                              n_bins = 8, bin_width = 10, cap = NULL) {
+  binning <- match.arg(binning)
+  ages <- data[[age_var]]
+  
+  if (binning == "quantile") {
+    if (!is.null(cap)) {
+      # Quantile breaks only over the bulk of the distribution (below cap);
+      # everything at or above cap collapses into one fixed final bin (e.g. "85+")
+      below_cap <- ages[ages < cap]
+      breaks <- unique(quantile(below_cap, probs = seq(0, 1, length.out = n_bins), na.rm = TRUE))
+      breaks[1] <- floor(breaks[1])
+      breaks <- c(round(breaks), cap, ceiling(max(ages, na.rm = TRUE)))
+      breaks <- unique(breaks)
+      
+      labels <- character(length(breaks) - 1)
+      for (i in seq_along(labels)) {
+        if (breaks[i] == cap) {
+          labels[i] <- paste0(cap, "+")
+        } else {
+          labels[i] <- paste0(breaks[i], "-", breaks[i + 1] - 1)
+        }
+      }
+    } else {
+      breaks <- unique(quantile(ages, probs = seq(0, 1, length.out = n_bins + 1), na.rm = TRUE))
+      breaks[1] <- floor(breaks[1]); breaks[length(breaks)] <- ceiling(breaks[length(breaks)])
+      labels <- paste0(round(breaks[-length(breaks)]), "-", round(breaks[-1]))
+    }
+  } else {
+    max_age <- ceiling(max(ages, na.rm = TRUE) / bin_width) * bin_width
+    breaks <- seq(0, max_age, by = bin_width)
+    labels <- paste0(breaks[-length(breaks)], "-", breaks[-1] - 1)
+  }
+  
+  list(
+    groups = cut(ages, breaks = breaks, labels = labels, right = FALSE, include.lowest = TRUE),
+    labels = labels,
+    breaks = breaks
+  )
+}
+
+create_age_comorbidity_heatmap <- function(data, comorbidity_labels, 
+                                           age_var = "age_at_dx", n_bins = 8,
+                                           binning = c("quantile", "fixed"), 
+                                           bin_width = 10, cap = 85,
+                                           critical_levels = c(3, 4), min_n = 20,
+                                           title = NULL) {
+  binning <- match.arg(binning)
+  d <- copy(data)
+  
+  ag <- assign_age_groups(d, age_var = age_var, binning = binning, 
+                          n_bins = n_bins, bin_width = bin_width, cap = cap)
+  d[, age_group := ag$groups]
+  age_labels <- ag$labels
+  
+  d[, is_critical := severity_level %in% critical_levels]
+  
+  compute_row <- function(subset_dt, row_name) {
+    agg <- subset_dt[!is.na(age_group), .(n = .N, pct_critical = round(mean(is_critical) * 100, 1)), 
+                     by = age_group]
+    agg[, row := row_name]
+    agg
+  }
+  
+  overall <- compute_row(d, "Overall")
+  rows <- rbindlist(lapply(names(comorbidity_labels), function(v) {
+    compute_row(d[get(v) == 1], comorbidity_labels[[v]])
+  }))
+  
+  long <- rbind(overall, rows)
+  grid <- CJ(row = c("Overall", unname(comorbidity_labels)), age_group = age_labels)
+  long <- merge(grid, long, by = c("row", "age_group"), all.x = TRUE)
+  long[is.na(n), n := 0]
+  long[, pct_plot := fifelse(n >= min_n, pct_critical, NA_real_)]
+  
+  wide <- dcast(long[row != "Overall"], row ~ age_group, value.var = "pct_critical", fill = 0)
+  row_mat <- as.matrix(wide[, -1, with = FALSE])
+  rownames(row_mat) <- wide$row
+  hc <- hclust(dist(row_mat), method = "average")
+  ordered_rows <- c("Overall", rownames(row_mat)[hc$order])
+  
+  long[, row := factor(row, levels = ordered_rows)]
+  long[, age_group := factor(age_group, levels = age_labels)]
+  setorder(long, row, age_group)
+  
+  long |>
+    e_charts(age_group) |>
+    e_heatmap(row, pct_plot, itemStyle = list(borderColor = "#ffffff", borderWidth = 1)) |>
+    e_visual_map(pct_plot, min = 0, max = max(long$pct_critical, na.rm = TRUE), 
+                 inRange = list(color = c(palette_blue[1], color_alert)),
+                 right = 10, orient = "vertical", top = "center") |>
+    e_grid(show = TRUE, backgroundColor = palette_blue[1], right = "15%") |>
+    e_tooltip(formatter = htmlwidgets::JS(
+      "function(p) { 
+         if (p.value[2] === null || p.value[2] === undefined) return p.value[1] + ' / ' + p.value[0] + '<br/>Suppressed (low N)';
+         return p.value[1] + ' / ' + p.value[0] + '<br/>Critical: ' + p.value[2] + '%';
+       }"
+    )) |>
+    e_x_axis(axisLabel = list(rotate = 45, interval = 0)) |>
+    e_title(
+      text = title,
+      subtext = sprintf("Row order reflects hierarchical clustering by risk profile (Overall pinned as baseline). Blank cells: fewer than %d patients.", min_n),
+      textStyle = list(fontFamily = dashboard_font, fontSize = 14)
+    )
+}
+
 .setup_done <- TRUE
+
+
+
+
