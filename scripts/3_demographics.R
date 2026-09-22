@@ -4,7 +4,7 @@
 # Standalone fallback below only triggers if opened in isolation.
 # ==============================================================================
 
-if (!exists(".setup_done")) source(here::here("scripts", "1_setup.R"))
+if (!exists(".setup_done"))  source(here::here("scripts", "1_setup.R"))
 if (!exists(".data_loaded")) source(here::here("scripts", "1_setup.R"))
 
 # ---- Load libraries, functions, palette and data ----
