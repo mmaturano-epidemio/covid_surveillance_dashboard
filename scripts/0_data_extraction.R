@@ -5,7 +5,7 @@
 # ---- Getting libraries and data ----
 
 pacman::p_load(data.table, DBI, RPostgres, stringr, here)
-
+readRenviron(".Renviron")
 con <- dbConnect(
   RPostgres::Postgres(),
   host     = Sys.getenv("SUPABASE_HOST"),
@@ -184,9 +184,9 @@ LEFT JOIN chd_pre_covid ON p.id = chd_pre_covid.patient_id
 LEFT JOIN afib_pre_covid ON p.id = afib_pre_covid.patient_id
 LEFT JOIN chronic_resp_pre_covid  ON p.id = chronic_resp_pre_covid.patient_id;
 "
-
+dbGetQuery(con, "select * from encounters limit 1")
 raw_data <- dbGetQuery(con, query) 
-
+dir.create(here("datasets"))
 saveRDS(raw_data, here("datasets", "raw_data.rds"))
 
 dbDisconnect(con)
@@ -207,7 +207,7 @@ factor_cols <- c("gender", "race_name", "city", "county", "dx_encounter_class",
 tidy_data[, (factor_cols) := lapply(.SD, as.factor),
          .SDcols = factor_cols]
 
-levels(tidy_data$race_name) <- stringr::str_to_title(levels(data$race_name))
+levels(tidy_data$race_name) <- stringr::str_to_title(levels(tidy_data$race_name))
 
 tidy_data <- tidy_data[, -c("inpatient_org_state", "dx_org_state"), with = F] # Only one state
 
@@ -217,7 +217,7 @@ tidy_data[, severity_level_broad := factor(
         severity_level %in% 3:4, "Respiratory support / deceased"),
   levels = c("Outpatient", "Hospitalized without respiratory support", "Respiratory support / deceased"))]
 
-morbidities <- names(data)[names(data) %ilike% "pre_"]
+morbidities <- names(tidy_data)[names(tidy_data) %ilike% "pre_"]
 tidy_data[, comorbidities := Reduce(f = `+`, x = .SD), .SDcols = morbidities]
 tidy_data[, comorbidity_count_grouped := fifelse(comorbidities >= 4, "4+", as.character(comorbidities))]
 tidy_data[, comorbidity_count_grouped := factor(comorbidity_count_grouped, levels = c("0","1","2","3","4+"))]
