@@ -51,7 +51,7 @@ org_labels <- sprintf(
 
 # ---- 7. Map ----
 map <- leaflet(map_counties) |>
-  addProviderTiles(providers$CartoDB.Positron) |>
+  addProviderTiles(providers$Esri.WorldGrayCanvas) |>
   addMapPane("orgPane", zIndex = 650) |>  # markers pane sits above the default overlay pane (~400-500)
   addPolygons(
     fillColor = ~pal_rate(rate_100k),
