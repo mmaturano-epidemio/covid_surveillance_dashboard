@@ -224,4 +224,3 @@ tidy_data[, comorbidity_count_grouped := factor(comorbidity_count_grouped, level
 
 
 saveRDS(tidy_data, here("datasets", "tidy_data.rds"))
-
